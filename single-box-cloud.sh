@@ -127,7 +127,6 @@ hwclock --systohc
 
 ## Install Eucalyptus
 # Install the repos
-#yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/eucalyptus-release-3.1.1.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/eucalyptus-release-3.1-1.el6.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/euca2ools/2.1/centos/6/x86_64/euca2ools-release-2.1-2.el6.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/epel-release-6-7.noarch.rpm
@@ -195,6 +194,9 @@ for x in $IFACES; do
         ifup $x
 done
 
+#make sure dnsmasq is really turned off ( libvirt does things)
+service dnsmasq stop
+
 # Register components
 euca_conf --skip-scp-hostcheck --register-walrus --partition walrus --host $FE_HOST --component walrus-single
 euca_conf --skip-scp-hostcheck --register-cluster --partition cluster01 --host $FE_HOST --component cc-single
@@ -206,15 +208,17 @@ cd /root/creds/
 euca_conf --get-credentials admin.zip
 unzip admin.zip
 
+# --- You can use these hints below to download, register a new image, then power it up
 
-#source eucarc
+#
+#source ~/creds/eucarc
 #euca-describe-availability-zones verbose
-#cd ..
+#cd ~
 #mkdir centos_img
 #cd centos_img/
-#wget http://192.168.7.65/ami-creator/centos6-201209051029/ks-centos6-201209051029.img.gz
-#wget http://192.168.7.65/ami-creator/centos6-201209051029/vmlinuz-2.6.32-279.5.2.el6.x86_64
-#wget http://192.168.7.65/ami-creator/centos6-201209051029/initramfs-2.6.32-279.5.2.el6.x86_64.img
+#wget http://s3.amazonaws.com/centos6-201209051029/ks-centos6-201209051029.img.gz
+#wget http://s3.amazonaws.com/centos6-201209051029/vmlinuz-2.6.32-279.5.2.el6.x86_64
+#wget http://s3.amazonaws.com/centos6-201209051029//initramfs-2.6.32-279.5.2.el6.x86_64.img
 #ls
 #euca-bundle-image -i vmlinuz-2.6.32-279.5.2.el6.x86_64 --kernel true
 #euca-upload-bundle -b centos-test -m /tmp/vmlinuz-2.6.32-279.5.2.el6.x86_64.manifest.xml
