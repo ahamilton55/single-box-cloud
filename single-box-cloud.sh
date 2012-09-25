@@ -44,16 +44,31 @@ while [ $# -gt 0 ]; do
         usage
 done
 
+# Get some basic stuff setup
+yum -y install unzip openssh-clients rsync
+
 # Make registration easier later
 if [ ! -e /root/.ssh/id_rsa ]; then
         ssh-keygen -t rsa -N '' -f /root/.ssh/id_rsa 
 fi
 cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 
+# Check that we have kvm loaded, or force it
+# XXX: Since we modprobe, we might need to check perms of /dev/kvm
+if ( `lsmod | grep 'kvm' | wc -l` -lt 2 ]; then
+  grep vmx /proc/cpuinfo > /dev/null
+  if [ $? -eq 0 ]; then
+    modprobe kvm_intel
+  else
+    modprobe kvm_amd
+  fi
+fi
+
 # Install and start libvirtd
 yum install -y libvirt.x86_64
 chkconfig libvirtd on
 service libvirtd start
+
 
 # Turn off DNSMasq as it will cause issues later
 service dnsmasq stop
@@ -94,8 +109,9 @@ service network restart
 ssh-keyscan 172.16.0.1 $FE_HOST | tee /root/.ssh/known_hosts
 
 # Disable the firewall on the system
-cp /etc/sysconfig/system-config-firewall /etc/sysconfig/system-config-firewall.ol
-sed -i -e 's/enabled/disabled/' /etc/sysconfig/system-config-firewall.old
+# XXX: Can we leave eth0/1 still protected (?)
+cp /etc/sysconfig/system-config-firewall /etc/sysconfig/system-config-firewall.old
+sed -i -e 's/enabled/disabled/' /etc/sysconfig/system-config-firewall
 
 # Disable SELinux
 sed -i -e 's/\(SELINUX\=\)enabled/\1disabled/' /etc/sysconfig/selinux
@@ -111,7 +127,7 @@ hwclock --systohc
 
 ## Install Eucalyptus
 # Install the repos
-yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/eucalyptus-release-3.1.1.noarch.rpm
+#yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/eucalyptus-release-3.1.1.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/eucalyptus-release-3.1-1.el6.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/euca2ools/2.1/centos/6/x86_64/euca2ools-release-2.1-2.el6.noarch.rpm
 yum -y install http://downloads.eucalyptus.com/software/eucalyptus/3.1/centos/6/x86_64/epel-release-6-7.noarch.rpm
